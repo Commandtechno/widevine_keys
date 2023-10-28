@@ -2,6 +2,9 @@ import requests
 import binascii
 import base64
 
+url = ""
+token = ""
+
 
 class Key:
     def __init__(self, kid, type, key, permissions=[]):
@@ -22,9 +25,7 @@ class Key:
 
 
 class Api:
-    def __init__(self, url, key):
-        self.url = url
-        self.key = key
+    def __init__(self):
         self.cert = None
 
     def set_cert(self, cert):
@@ -32,7 +33,7 @@ class Api:
 
     def req(self, method, params):
         res = requests.post(
-            self.url, json={"method": method, "params": params, "token": self.key}
+            url, json={"method": method, "params": params, "token": token}
         ).json()
 
         if res.get("status_code") != 200:
@@ -43,7 +44,7 @@ class Api:
         return res["message"]
 
     def get_license_challenge(self, pssh):
-        res = self.session(
+        res = self.req(
             "GetChallenge",
             {
                 "init": pssh,
@@ -59,7 +60,7 @@ class Api:
         if isinstance(license_res, bytes):
             license_res = base64.b64encode(license_res).decode()
 
-        res = self.session(
+        res = self.req(
             "GetKeys",
             {"cdmkeyresponse": license_res, "session_id": self.api_session_id},
         )
@@ -72,15 +73,3 @@ class Api:
             )
             for x in res["keys"]
         ]
-
-    def session(self, method, params=None):
-        res = requests.post(
-            self.host, json={"method": method, "params": params, "token": self.key}
-        ).json()
-
-        if res.get("status_code") != 200:
-            raise ValueError(
-                f"CDM API returned an error: {res['status_code']} - {res['message']}"
-            )
-
-        return res["message"]
